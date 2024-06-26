@@ -3,6 +3,7 @@ module github.com/naemono/elasticsearch-cleanup
 go 1.22.1
 
 require (
+	github.com/avast/retry-go v3.0.0+incompatible // indirect
 	github.com/elastic/elastic-transport-go/v8 v8.5.0 // indirect
 	github.com/elastic/go-elasticsearch/v8 v8.13.0 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect

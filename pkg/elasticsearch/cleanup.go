@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"regexp"
 
+	"github.com/avast/retry-go"
 	esv8 "github.com/elastic/go-elasticsearch/v8"
 )
 
@@ -77,12 +78,19 @@ func (c *Client) Go(ctx context.Context) error {
 				paramsMap[name] = match[i]
 			}
 			fmt.Printf("About to rollover Index: %s, Size: %d\n", index, stats.Total.Store.SizeInBytes)
-			if _, err := c.V8Client.Indices.Rollover(paramsMap["Index"]).Do(ctx); err != nil {
-				return fmt.Errorf("while rolling over %s index: %w", paramsMap["Index"], err)
-			}
-			if _, err := c.V8Client.Indices.Delete(index).Do(ctx); err != nil {
-				return fmt.Errorf("while deleting %s index: %w", index, err)
-			}
+			retry.Do(func() error {
+				if _, err := c.V8Client.Indices.Rollover(paramsMap["Index"]).Do(ctx); err != nil {
+					return fmt.Errorf("while rolling over %s index: %w", paramsMap["Index"], err)
+				}
+				return nil
+			}, retry.Attempts(10))
+
+			retry.Do(func() error {
+				if _, err := c.V8Client.Indices.Delete(index).Do(ctx); err != nil {
+					return fmt.Errorf("while deleting %s index: %w", index, err)
+				}
+				return nil
+			}, retry.Attempts(10))
 			indicesRolledOver++
 		}
 	}
